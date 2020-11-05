@@ -6,7 +6,7 @@ import (
 )
 
 //Check checks codeword with the checksum if the whole codeword is valid or not.
-func Check(codeword string) bool{
+func Check(codeword string) (bool, string){
 	padded := padding(&codeword)
 
 	splitsData := splits(padded)
@@ -22,5 +22,5 @@ func Check(codeword string) bool{
 		}
 		checksum = Tchecksum
 	}
-	return !strings.Contains(checksum,"0")
+	return !strings.Contains(checksum,"0") , codeword[: len(codeword)-MAXBITSLENGTH]
 }

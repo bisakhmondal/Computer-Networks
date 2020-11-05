@@ -36,3 +36,11 @@ func splits(str string) []string{
 	}
 	return chops
 }
+
+func GenerateAll(datawords [] string) [] string{
+	codewords := make([] string, len(datawords))
+	for i := range datawords{
+		codewords[i] = Generate(datawords[i])
+	}
+	return codewords
+}

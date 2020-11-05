@@ -11,14 +11,28 @@ import (
 	"os"
 	"math/rand"
 	"sync"
+	"strings"
+	"time"
 )
 
 var (
-	errorBits = flag.Int("err", 0, "inject error in n bits")
+	errorBits = flag.Int("err", -1, "inject error in n bits")
 	scheme    = flag.String("scheme", "lrc", "detection schme used on codeword")
 	filename  = flag.String("file", "data.txt", "File to be read for input codeword")
-	lrcScheme = flag.String("CRC", "CRC7", "the generator scheme for cyclic redundancy checks")
+	crcScheme = flag.String("CRC", "CRC8", "the generator scheme for cyclic redundancy checks")
+	frameSize = flag.Int("framesize", 10, "the framesize on ehich data will be splited")
+	verbose = flag.Bool("verbose", true , "the test results")
+	opFile = "output.txt"
+	fileForRead = false
 	wg sync.WaitGroup
+	fileMut sync.Mutex
+	// opFilemap = map[string]string{
+	// 	"LRC": "codewords/lrc.txt",
+	// 	"VRC":  "codewords/vrc.txt",
+	// 	"CRC":  "codewords/crc.txt",
+	// 	"CHECKSUM":  "codewords/checksum.txt",
+	// }
+
 	NUMSender int
 )
 
@@ -34,72 +48,89 @@ func init(){
 		NUMSender = 2
 		wg.Add(NUMSender)
 	}
-	rand.Seed(60)
+	
 }
 
 type responseType struct{
-	codeword, schemeName, generator string
-	checker func(string)bool
+	schemeName, generator string
+	c []string
+	checker func(string) (bool, string)
 }
 
 func main() {
-
+	
+	rand.Seed(time.Now().UnixNano())
+	// log.Println(rand.Intn(15))
 	file, err := os.Open(*filename)
 	if err != nil {
 		log.Fatal("Invalid Filename")
 	}
 
 	dataBytes, _ := ioutil.ReadAll(file)
-	dataword := string(dataBytes)
+	inputString := string(dataBytes)
 
-	response := make(chan *responseType,2)
+
+	response := make(chan *responseType,1)
 	
 	if *scheme == "all"{
-		go Sender(dataword, "lrc", response)
-		go Sender(dataword, "vrc", response)
-		go Sender(dataword, "checksum", response)
-		go Sender(dataword, "crc", response)
+		go Sender(inputString, "lrc", response)
+		go Sender(inputString, "vrc", response)
+		go Sender(inputString, "checksum", response)
+		go Sender(inputString, "crc", response)
 	}else {
-		go Sender(dataword, *scheme, response)
+		go Sender(inputString, *scheme, response)
 	}
 
 	for i := 0; i< NUMSender/2; i++{
 		
 		select{
-		case encodedCodeword := <- response:
-			encodedCodeword.codeword = taintBits(encodedCodeword.codeword)
-			go Receiver(encodedCodeword)
+		case deliveryStatus := <- response:
+			
+			fileMut.Lock()
+			fss ,_ := os.Open(opFile)//map[deliveryStatus.schemeName])
+			readBytes ,_ := ioutil.ReadAll(fss)
+			codewords := strings.Split(string(readBytes), " ")
+			fileForRead=false
+			fileMut.Unlock()
+
+			// log.Println(codewords)
+			taintBits(codewords) // adding transmission error
+			// log.Println(codewords)
+
+			go Receiver(codewords, deliveryStatus, *verbose)
 		}
 	}
 	wg.Wait()
-	test2(dataword)
-	test3(dataword)
+	test2(inputString[0:8])
+	test3(inputString[0:8])
 }
 
-func Sender(dataword, localScheme string, chanvar chan *responseType){
+func Sender(inputString, localScheme string, chanvar chan *responseType){
 	defer wg.Done()
-	var codeword string
+	var codeword []string
 	response := &responseType{}
 	
+	datawords := splitFrame(inputString)
+
 	switch localScheme{
 	case "lrc":
-		codeword = lrc.Generate(dataword)
+		codeword = lrc.GenerateAll(datawords)
 		response.checker = lrc.Check
 		response.schemeName = lrc.NAME
 
 	case "vrc":
-		codeword = vrc.Generate(dataword)
+		codeword = vrc.GenerateAll(datawords)
 		response.checker = vrc.Check
 		response.schemeName = vrc.NAME
 
 	case "checksum":
-		codeword = chk.Generate(dataword)
+		codeword = chk.GenerateAll(datawords)
 		response.checker = chk.Check
 		response.schemeName = chk.NAME
 
 	case "crc":
 		var generator string
-		switch *lrcScheme{
+		switch *crcScheme{
 		case "CRC1":
 			generator = crc.CRC1
 		case "CRC7":
@@ -109,36 +140,69 @@ func Sender(dataword, localScheme string, chanvar chan *responseType){
 		default:
 			generator = crc.CRC8
 		}
-		codeword = crc.Generate(dataword, generator)
+		codeword = crc.GenerateAll(datawords, generator)
 		response.generator = generator
 		response.schemeName = crc.NAME
 	}
-	response.codeword= codeword
+	
+	fileMut.Lock()
+	fi, _ := os.Create(opFile)//map[response.schemeName])
+	fi.WriteString(strings.Join(codeword, " "))
+	fi.Close()
+	fileForRead=true
+	fileMut.Unlock()
+
+	response.c = codeword
 	chanvar <- response
 }
 
 
-func Receiver(response *responseType){
+func Receiver(codewords []string, response *responseType, verbose bool){
 	defer wg.Done()
-	var validation bool 
-	if response.schemeName== "CRC"{
-		validation = crc.Check(response.codeword, response.generator)
-	} else{
-		validation = response.checker(response.codeword)
+	falseCounter, dataword :=0, ""
+	for _, codeword := range codewords{
+		var validation bool
+		var data string
+		if response.schemeName== "CRC"{
+			validation, data = crc.Check(codeword, response.generator)
+		} else{
+			validation, data = response.checker(codeword)
+		}
+		if !validation{
+			falseCounter++
+		}
+		dataword += data
 	}
-	log.Println("Test: ", response.schemeName, fmtTest(validation))
+	log.Println("Test: ", response.schemeName, fmtTest(falseCounter==0))
+	if verbose{
+		log.Println(response.schemeName, " : Received Data: ", dataword)
+		log.Println(response.schemeName, "Total noisy frames: ", falseCounter, " out of: ", len(codewords) )
+	}
 }
 
-//Inject error at random position in codeword.
-func taintBits(codeword string) string{
-	errbitsTemp := *errorBits
-	codearr := []rune(codeword)
-	for errbitsTemp > 0{
-		idx := rand.Intn(len(codeword))
-		codearr[idx] = rune(int(codearr[idx]-'0')^1 +'0')
-		errbitsTemp--
+//Inject error at random position random number of times in codeword.
+func taintBits(codewords []string) {
+	noiseCnt:=0
+	for i := range codewords{
+
+		codeword := codewords[i]
+		errbitsTemp := *errorBits
+
+		if errbitsTemp ==-1{
+			errbitsTemp = rand.Intn(len(codeword))
+		}
+		if errbitsTemp!=0{
+			noiseCnt++
+		}
+		codearr := []rune(codeword)
+		for errbitsTemp > 0{
+			idx := rand.Intn(len(codeword))
+			codearr[idx] = rune(int(codearr[idx]-'0')^1 +'0')
+			errbitsTemp--
+		}
+		codewords[i] =  string(codearr)
 	}
-	return string(codearr)
+	log.Println("Noisy Frame on Transmission: ", noiseCnt)
 }
 
 //Formatting tool to print custom errors as per the requirement.
@@ -152,21 +216,58 @@ func fmtTest(result bool)string {
 }
 
 func test2(dataword string){
-	log.Println("Error is detected by checksum but not by CRC.")
-	codeword := crc.Generate(dataword, crc.CRC8)
-	codecodeword := chk.Generate(codeword)
+	log.Println("TEST2: Error is detected by checksum but not by CRC.")
 	log.Println("dataword: ", dataword)
-	log.Println("Codeword: ", codecodeword)
-	log.Println("CHECKSUM ", fmtTest(chk.Check(codecodeword)))
-	log.Println("CRC ", fmtTest(crc.Check(codecodeword, crc.CRC8)))
+	codeword := crc.Generate(dataword, crc.CRC7)
+	berrorCRC := BurstError(codeword, len(crc.CRC7))
+	log.Println("CRC Codeword: True: ",codeword, " : Erroneous: ",  berrorCRC)
+	validation,_ := crc.Check(berrorCRC, crc.CRC7)
+	log.Println("CRC ", fmtTest(validation))
+
+	codeword = chk.Generate(dataword)
+	berrorCRC = BurstError(codeword, len(crc.CRC7))
+	validation, _ = chk.Check(berrorCRC)
+	log.Println("CHECKSUM Codeword: True: ",codeword, " : Erroneous: ",  berrorCRC)
+	log.Println("CHECKSUM ", fmtTest(validation))
+}
+
+
+func BurstError(codeword string, len int) string{
+	codearr := []rune(codeword)
+	codearr[0] = rune(int(codearr[0]-'0')^1 +'0')
+	codearr[len-1] = rune(int(codearr[len-1]-'0')^1 +'0')
+	mid := rand.Intn(len)
+	codearr[mid] = rune(int(codearr[mid]-'0')^1 +'0')
+	return string(codearr)
 }
 
 func test3(dataword string){
-	log.Println("Error is detected by VRC but not by CRC.")
-	codeword := vrc.Generate(dataword)
-	codecodeword := crc.Generate(codeword, crc.CRC7)
+	log.Println("TEST3: Error is detected by checksum but not by CRC.")
 	log.Println("dataword: ", dataword)
-	log.Println("Codeword: ", codecodeword)
-	log.Println("VRC ", fmtTest(vrc.Check(codecodeword)))
-	log.Println("CRC ", fmtTest(crc.Check(codecodeword, crc.CRC7)))
+	codeword := crc.Generate(dataword, crc.CRC7)
+	berrorCRC := BurstError(codeword, len(crc.CRC7))
+	log.Println("CRC Codeword: True: ",codeword, " : Erroneous: ",  berrorCRC)
+	validation,_ := crc.Check(berrorCRC, crc.CRC7)
+	log.Println("CRC ", fmtTest(validation))
+
+	codeword = vrc.Generate(dataword)
+	berrorCRC = BurstError(codeword, len(crc.CRC7))
+	validation, _ = vrc.Check(berrorCRC)
+	log.Println("VRC Codeword: True: ",codeword, " : Erroneous: ",  berrorCRC)
+	log.Println("VRC ", fmtTest(validation))
+}
+
+func splitFrame(str string) []string{
+	// for str = ""123456789"" && *frameSize=4 returns [1234 5678 9]
+
+	var chops []string
+	i :=0
+	for ;i<len(str);i+= *frameSize{
+		if len(str[i:])<*frameSize{
+			chops = append(chops, str[i:])
+			break
+		}
+		chops = append(chops, str[i: i+ *frameSize])
+	}
+	return chops
 }

@@ -1,7 +1,7 @@
 package lrc
 
 //Check if the sequence is correct or not.
-func Check(raw string) bool {
+func Check(raw string) (bool,string) {
 	data := padding(&raw)
 
 	for i := 0; i < MAXBITSLENGTH; i++ {
@@ -10,8 +10,8 @@ func Check(raw string) bool {
 			parity ^= int(data[i+j]) - '0'
 		}
 		if parity != 0 {
-			return false
+			return false, raw[:len(raw)-MAXBITSLENGTH]
 		}
 	}
-	return true
+	return true, raw[:len(raw)-MAXBITSLENGTH]
 }

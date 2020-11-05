@@ -32,3 +32,11 @@ func Generate(raw string) string{
 	}
 	return raw + parities
 }
+
+func GenerateAll(datawords [] string) [] string{
+	codewords := make([] string, len(datawords))
+	for i := range datawords{
+		codewords[i] = Generate(datawords[i])
+	}
+	return codewords
+}

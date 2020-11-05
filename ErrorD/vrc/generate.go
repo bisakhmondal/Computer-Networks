@@ -21,3 +21,11 @@ func Generate(data string) string{
 	
 	return data + strconv.Itoa(parity)
 }
+
+func GenerateAll(datawords [] string) [] string{
+	codewords := make([] string, len(datawords))
+	for i := range datawords{
+		codewords[i] = Generate(datawords[i])
+	}
+	return codewords
+}
