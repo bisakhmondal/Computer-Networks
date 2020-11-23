@@ -23,7 +23,7 @@ class SyncedQueue{
         T pop(){
             std::unique_lock<std::mutex> lock(m);
             
-            while(q.empty){
+            while(q.empty()){
                 c.wait(m); //release the lock until it gets filled with a value by other workers.
             }
             T popped = q.front();
