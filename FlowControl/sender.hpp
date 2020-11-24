@@ -27,7 +27,7 @@ namespace fc{
                 
                 srcMac = getpid();
             }
-            virtual void send()= 0;
+            virtual void send(const int &)= 0;
             virtual void Recv_ACK() =0;
         };
 
@@ -37,7 +37,7 @@ namespace fc{
 
             int Sn;
 
-            std::queue<char *> tempBuffer;
+            std::queue<bytestream_t> tempBuffer;
             public:
 
             StopNWait(pid_t mac, std::string fifo): Base( mac,fifo){
@@ -49,19 +49,20 @@ namespace fc{
 
             //Timeout function.
             inline bool Timeout(std::unique_lock<std::mutex> &lk){
-                return lock.c.wait_for(lk, std::chrono::seconds(TIMEOUT))== std::cv_status::timeout;
+                std::cout<<"at timeout\n";
+                return lock.c.wait_for(lk, std::chrono::seconds(10))== std::cv_status::timeout;
             }
 
             void Recv_ACK(){
                 
+                std::cout<<std::endl<<"fifo open"<<std::endl;
                 descriptor_t fd = openFifo(fifoPipe, O_RDONLY);
 
                 char * ack_frame;
                 int status;
-
                 //free the pipe by consuming the whole.
                 while((status=read(fd, ack_frame, fc::ACKSIZE))>0){
-                    tempBuffer.push(ack_frame);
+                    tempBuffer.push(bytestream_t(ack_frame));
                 }
                 if(status==-1)
                     std::cerr<<std::this_thread::get_id()<<" :fifo read error on ->"<< fifoPipe<< std::endl;
@@ -72,45 +73,64 @@ namespace fc{
             }
 
             void send(const int &d){
-
-                char * data =  CreateFrame<int>(srcMac, destMac, d);
-                
+                using namespace std;
+                bytestream_t data =  frame::CreateFrame<int>(srcMac, destMac, d, Sn);
+                cout<<"frame generated"<<endl;
                 bool Sent = true;
                 
-                Sn++;
+                Sn = (Sn+1)%2;
 
                 do{
                     std::unique_lock<std::mutex> lk(lock.m);
+                    std::cout<<"lock acquired\n";
                     descriptor_t fd = openFifo(fifoPipe, O_WRONLY);
-                    if(write(fd, data, FrameSize)<0){
+                    if(write(fd, data.c_str(), FrameSize)<0){
                         std::cerr<<"fifo write failed from sender node"<<std::endl;
                     }
 
                     close(fd);
-                    std::thread *tt = new std::thread(Recv_ACK);
-                
+                    cout<<"frame generated2"<<endl;
+                    
+                    std::thread tt([this]{this->Recv_ACK();});
+                    cout<<"after rec"<<endl;
+                    tt.detach();
+                //= new std::thread
                     //timeout using unique lock.
                     if(Timeout(lk)){
-                        delete tt;//not going with delete as at d
+                        cout<<"detached "<<d<<endl;
+                        // delete tt;//not going with delete as at d
                         Sent=false;
                         continue;
                     }
-
                     lk.unlock();
-                    /* Not corrupted and ackNum =Sn
+                    // Not corrupted and ackNum =Sn
                         bool isIn=false;
+                        
                         while(!tempBuffer.empty()){
-                            char * ackFrame = tempBuffer.front();
+                            bytestream_t ackFrame = tempBuffer.front();
                             tempBuffer.pop();
-                            int ackNum = getAckNum(ackFrame);
+                            
+                            if(!frame::checkFrameIntegrity(ackFrame))
+                                continue;
+                            
+                            int ackNum = frame::getSEQNO(ackFrame);
+                            
                             if(ackNum==Sn)
                                 isIn=true;
                         }
+
                         if(!isIn)
                             Sent = false;
-                    */
+                    
                 }while(!Sent);
 
+            }
+
+            void run(){
+
+                for(auto &i: STAICDATA){
+                    send(i);
+                }
             }
 
         };

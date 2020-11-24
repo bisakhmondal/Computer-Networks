@@ -54,7 +54,7 @@ class BinSemaphore{
 
 
     ~BinSemaphore(){
-        std::cout<<"des: "<<std::endl;
+        // std::cout<<"des: "<<std::endl;
         sem_unlink(name.c_str());
         sem_destroy(semptr);
     }
