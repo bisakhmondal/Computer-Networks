@@ -6,8 +6,8 @@
 namespace fc{
     
     const int NUM_NODES = 1;// number of sender and receiver
-    const int FrameSize=(56+8+2*48 + 8 + 46*8 + 32);
-    const int ACKSIZE = FrameSize - 46*8;
+    const int FrameSize=(7+ 8 + 2*48 + 8 + 46 + 32);
+    const int ACKSIZE = FrameSize - 46;
     //fifos
     const std::string S2CFIFO = "fifos/sender2channel";
     const std::string C2SFIFO = "fifos/channel2sender";
@@ -25,9 +25,9 @@ namespace fc{
     const int ALLOCATE_BYTES = 128;
 
     //data(for simplicity decimal representation) obtained from higher layers in OSI / tcp suite.
-    const int STAICDATA[] = {10,20,12,18,24,27};
+    const int STAICDATA[] = {15, 40, 60, 100, 75};
 
-    const int TIMEOUT = 1; //timeout in 1 second
+    const int TIMEOUT = 5; //timeout in 5 second
 
 }
 

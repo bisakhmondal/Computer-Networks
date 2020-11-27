@@ -6,36 +6,55 @@
 #include "semaphore.hpp"
 #include<fcntl.h>
 #include<thread>
-
+#include <string.h>
+#include <filesystem>
 using namespace std;
 
+void MakeFiFO(string fifo){
+    if(!std::filesystem::exists(fifo)){
+        mkfifo(fifo.c_str(), 0644);
+    }
+}
 class Channel{
     fc::syncedBuffer_t toReceiver, toSender;
     public:
     void fifoRead(string fifoname, int frameSize, bool bysender=true){
+        MakeFiFO(fifoname);
+        cout<<fifoname<<endl;
         while(true){
-            fc::descriptor_t fd = fc::openFifo(fifoname, O_RDONLY);
-            char * data;
+            fc::descriptor_t fd = open(fifoname.c_str(), O_RDONLY);
+            char data[frameSize+1];
             int status;
-            if((status=read(fd, data, frameSize))>0){
+
+            if((status=read(fd, data, frameSize+1))>0){
+
+                close(fd);
+
                 if(status==-1){
                     cerr<<"fifo read failed"<<endl;
                     continue;
                 }
-                string d(data);
+
+                if(bysender){
+                    cout<<"read from sender"<<endl;
+                }else{
+                    cout<<"read from receiver"<<endl;
+                }
+                fc::bytestream_t d(data);
                 if(bysender){
                     toReceiver.push(d);
                 }else{
                     toSender.push(d);
                 }
             }
-            close(fd);
         }
     }
 
     void fifoWrite(string fifoname, int framesize, bool bysender=true){
+        MakeFiFO(fifoname);
+        cout<<fifoname<<endl;
         while(true){
-            fc::descriptor_t fd = fc::openFifo(fifoname, O_WRONLY);
+            fc::descriptor_t fd = open(fifoname.c_str(), O_WRONLY);
 
             fc::bytestream_t data;
             if(bysender){
@@ -43,16 +62,31 @@ class Channel{
             }else{
                 data = toSender.pop();
             }
-            char * d = &data[0];
+            char d[framesize+1];
+            strcpy(d, (char*)data.c_str());
             //add noises in 20%cases
             if(rand()%10>=8){
                 addNoise(d, framesize);
             }
-            if(write(fd, d, framesize)==-1){
+            if(write(fd, d, framesize+1)==-1){
                 cerr<<"fifo write failed"<<endl;
+//                if(bysender){
+//                    toReceiver.push(data);
+//                }else{
+//                    toSender.push(data);
+//                }
             }
+
+            if(bysender){
+                    cout<<"write to receiver"<<endl;
+                }else{
+                    cout<<"write to sender"<<endl;
+                    cout<<"buffer size "<<toSender.len()<<" "<<toReceiver.len()<<endl<<endl;
+                }
             close(fd);
+
         }
+
     }
 
     void addNoise(char * frame, int framesize){
