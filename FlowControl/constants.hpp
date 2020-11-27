@@ -26,6 +26,7 @@ namespace fc{
 
     //data(for simplicity decimal representation) obtained from higher layers in OSI / tcp suite.
     const int STAICDATA[] = {15, 40, 60, 100, 75};
+    const int sizeM = 4;
 
     const int TIMEOUT = 5; //timeout in 5 second
 

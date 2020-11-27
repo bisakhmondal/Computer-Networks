@@ -8,6 +8,7 @@
 #include<thread>
 #include "sender.hpp"
 #include <string.h>
+#include "frameutils.hpp"
 //devdeps
 #include<signal.h>
 #include<sys/wait.h>
@@ -129,6 +130,10 @@ class SenderController{
             char  ackFrame[fc::ACKSIZE+1];
             while(read(fd, ackFrame, fc::ACKSIZE+1)>0){
 //                cout<<" ack received from channel(controller) "<<endl;
+                if(!fc::frame::checkFrameIntegrity(fc::bytestream_t(ackFrame))){
+                    cout<<"corrupted acknowledgement frame received...discarding..."<<endl;
+                    continue;
+                }
                 ackBuffer.push(string(ackFrame));
             }
             close(fd);
@@ -186,7 +191,8 @@ MakeFiFO(fc::S2SSFIFO+ "_" +to_string(cnt));
                 
                 cout<<"node init "<<cnt<<endl;
 
-                fc::Sender::StopNWait(r_mac, fc::S2SSFIFO+ "_" +to_string(cnt), fc::S2SSFIFO+ "_R" +to_string(cnt)).run();
+//                fc::Sender::StopNWait(r_mac, fc::S2SSFIFO+ "_" +to_string(cnt), fc::S2SSFIFO+ "_R" +to_string(cnt)).run();
+               fc::Sender::GOBACKN(r_mac, fc::S2SSFIFO+ "_" +to_string(cnt), fc::S2SSFIFO+ "_R" +to_string(cnt)).run();
 
                 return;
            }else{

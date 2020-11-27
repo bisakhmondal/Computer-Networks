@@ -64,8 +64,8 @@ class Channel{
             }
             char d[framesize+1];
             strcpy(d, (char*)data.c_str());
-            //add noises in 20%cases
-            if(rand()%10>=8){
+//            add noises in 20%cases
+            if(rand()%10>=9){
                 addNoise(d, framesize);
             }
             if(write(fd, d, framesize+1)==-1){

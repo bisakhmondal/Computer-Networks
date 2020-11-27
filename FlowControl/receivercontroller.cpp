@@ -143,7 +143,10 @@ class ReceiverController{
             }
             char ethFrame[fc::FrameSize+1];
             while(read(fd, ethFrame, fc::FrameSize+1)>0){
-//                cout<<"read through channel "<<fc::frame::getData(fc::bytestream_t(ethFrame))<< endl;
+                if(!fc::frame::checkFrameIntegrity(fc::bytestream_t(ethFrame))){
+                    cout<<"corrupted ethernet frame received...discarding..."<<endl;
+                    continue;
+                }
                 buffer.push(fc::bytestream_t (ethFrame));
             }
             close(fd);
@@ -184,7 +187,8 @@ class ReceiverController{
 
             if((id=fork())==0){
                 //child process
-                fc::Receiver::StopNWait(fc::R2RRFIFO+"__"+ to_string(i), fc::R2RRFIFO+"__R"+to_string(i)).run();
+//                fc::Receiver::StopNWait(fc::R2RRFIFO+"__"+ to_string(i), fc::R2RRFIFO+"__R"+to_string(i)).run();
+                fc::Receiver::GOBACKN(fc::R2RRFIFO+"__"+ to_string(i), fc::R2RRFIFO+"__R"+to_string(i)).run();
 
                 return;
             }else{
