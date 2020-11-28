@@ -6,10 +6,14 @@
 #include "semaphore.hpp"
 #include<fcntl.h>
 #include<thread>
-#include "sender.hpp"
 #include <string.h>
 #include "frameutils.hpp"
+#include "senders/stopNwait.hpp"
+#include "senders/selectiverepeat.hpp"
+#include "senders/gobackN.hpp"
+
 //devdeps
+// #include "sender.hpp"
 #include<signal.h>
 #include<sys/wait.h>
 
@@ -55,10 +59,6 @@ class SenderController{
     void workersProcess(const pid_t &sender_mac){
         
         string &fifo_name = routingtableR[sender_mac];
-//        DEBUG("Wprocess"+fifo_name)
-//        fc::Locker &locknwait = locks[sender_mac];
-
-        //unique_lock to release while execution
 
         while(true){
 //            DEBUG("wprocess Acq")
@@ -68,14 +68,11 @@ class SenderController{
             }
             char ethernet_frame[fc::FrameSize+1];
             int status;
-//            std::unique_lock<std::mutex> lock(locknwait.m);
 
             //free the pipe by consuming the whole.
             while((status=read(fd, ethernet_frame, fc::FrameSize+1))>0){
                 buffer.push(fc::bytestream_t(ethernet_frame));
-//                DEBUG("frame received");
-//                DEBUG(ethernet_frame)
-               
+   
             }
 //            lock.unlock();
             if(status==-1)
@@ -191,8 +188,9 @@ MakeFiFO(fc::S2SSFIFO+ "_" +to_string(cnt));
                 
                 cout<<"node init "<<cnt<<endl;
 
-//                fc::Sender::StopNWait(r_mac, fc::S2SSFIFO+ "_" +to_string(cnt), fc::S2SSFIFO+ "_R" +to_string(cnt)).run();
-               fc::Sender::GOBACKN(r_mac, fc::S2SSFIFO+ "_" +to_string(cnt), fc::S2SSFIFO+ "_R" +to_string(cnt)).run();
+            //    fc::Sender::StopNWait(r_mac, fc::S2SSFIFO+ "_" +to_string(cnt), fc::S2SSFIFO+ "_R" +to_string(cnt)).run();
+              fc::Sender::GOBACKN(r_mac, fc::S2SSFIFO+ "_" +to_string(cnt), fc::S2SSFIFO+ "_R" +to_string(cnt)).run();
+            //    fc::Sender::SELECTIVEREPEAT(r_mac, fc::S2SSFIFO+ "_" +to_string(cnt), fc::S2SSFIFO+ "_R" +to_string(cnt)).run();
 
                 return;
            }else{

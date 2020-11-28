@@ -2,6 +2,7 @@
 #define FLOW_CONTROL_CONTANTS
 
 #include<iostream>
+#include <vector>
 
 namespace fc{
     
@@ -26,9 +27,11 @@ namespace fc{
 
     //data(for simplicity decimal representation) obtained from higher layers in OSI / tcp suite.
     const int STAICDATA[] = {15, 40, 60, 100, 75};
+    std::vector<int> dataArray ={12, 45, 13, 56, 76, 67, 43, 23};
+
     const int sizeM = 4;
 
-    const int TIMEOUT = 5; //timeout in 5 second
+    const int TIMEOUT = 2; //timeout in 5 second
 
 }
 

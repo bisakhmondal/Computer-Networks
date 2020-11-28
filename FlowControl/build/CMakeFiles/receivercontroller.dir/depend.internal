@@ -6,8 +6,11 @@ CMakeFiles/receivercontroller.dir/receivercontroller.cpp.o
  /home/bisakh/Desktop/bcse/Computer-Networks/FlowControl/crc.hpp
  /home/bisakh/Desktop/bcse/Computer-Networks/FlowControl/frameutils.hpp
  /home/bisakh/Desktop/bcse/Computer-Networks/FlowControl/include/library.h
- /home/bisakh/Desktop/bcse/Computer-Networks/FlowControl/receiver.hpp
  /home/bisakh/Desktop/bcse/Computer-Networks/FlowControl/receivercontroller.cpp
+ /home/bisakh/Desktop/bcse/Computer-Networks/FlowControl/receivers/base.hpp
+ /home/bisakh/Desktop/bcse/Computer-Networks/FlowControl/receivers/gobackN.hpp
+ /home/bisakh/Desktop/bcse/Computer-Networks/FlowControl/receivers/selectiverepeat.hpp
+ /home/bisakh/Desktop/bcse/Computer-Networks/FlowControl/receivers/stopNwait.hpp
  /home/bisakh/Desktop/bcse/Computer-Networks/FlowControl/semaphore.hpp
  /home/bisakh/Desktop/bcse/Computer-Networks/FlowControl/shared_memory.hpp
  /home/bisakh/Desktop/bcse/Computer-Networks/FlowControl/threadSafeQueue.hpp

@@ -14,10 +14,10 @@ string XOR(string encoded , string crc){
     int crclen =  crc.length();
 
     for ( int i = 0 ; i <= (encoded.length() - crclen) ; )			// performing bitwise xor operation
-    {																// " 0 xor 0 = 0"     " 1 xor 1 = 0 "
-        for( int j=0 ; j < crclen ; j++)							// " 0 xor 1 = 1 "    " 1 xor 0 = 1"
+    {																
+        for( int j=0 ; j < crclen ; j++)							
         {
-            encoded[i+j] = encoded[i+j] == crc[j] ? '0' : '1' ;			//if encoded bit and crc bit are same , then replace it with zero
+            encoded[i+j] = encoded[i+j] == crc[j] ? '0' : '1' ;	
         }
         for( ; i< encoded.length() && encoded[i] != '1' ; i++) ;
 

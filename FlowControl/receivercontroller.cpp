@@ -7,10 +7,13 @@
 #include<fcntl.h>
 #include<thread>
 #include "frameutils.hpp"
-#include "receiver.hpp"
 #include<filesystem>
+#include "receivers/stopNwait.hpp"
+#include "receivers/gobackN.hpp"
+#include "receivers/selectiverepeat.hpp"
 
 //devdeps
+// #include "receiver.hpp"
 #include<signal.h>
 #include<sys/wait.h>
 
@@ -187,8 +190,9 @@ class ReceiverController{
 
             if((id=fork())==0){
                 //child process
-//                fc::Receiver::StopNWait(fc::R2RRFIFO+"__"+ to_string(i), fc::R2RRFIFO+"__R"+to_string(i)).run();
-                fc::Receiver::GOBACKN(fc::R2RRFIFO+"__"+ to_string(i), fc::R2RRFIFO+"__R"+to_string(i)).run();
+            //    fc::Receiver::StopNWait(fc::R2RRFIFO+"__"+ to_string(i), fc::R2RRFIFO+"__R"+to_string(i)).run();
+               fc::Receiver::GOBACKN(fc::R2RRFIFO+"__"+ to_string(i), fc::R2RRFIFO+"__R"+to_string(i)).run();
+                // fc::Receiver::SELECTIVEREPEAT(fc::R2RRFIFO+"__"+ to_string(i), fc::R2RRFIFO+"__R"+to_string(i)).run();
 
                 return;
             }else{
