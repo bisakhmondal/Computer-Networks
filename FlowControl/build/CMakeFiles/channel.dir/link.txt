@@ -1,0 +1,1 @@
+/usr/bin/c++   -O3 -Wextra   CMakeFiles/channel.dir/channel.cpp.o  -o channel  -lpthread 

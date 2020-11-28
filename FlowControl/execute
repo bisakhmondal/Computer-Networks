@@ -1,0 +1,5 @@
+#!/usr/bin/bash
+
+ g++ receivercontroller.cpp -std=c++17 -lrt -W -O3 -lpthread -o receivercontroller ./include/library.so
+ g++ sendercontroller.cpp -std=c++17 -lrt -W -O3 -lpthread -o sendercontroller ./include/library.so
+ g++ channel.cpp  -std=c++17 -lrt -W -O3 -lpthread -o channel

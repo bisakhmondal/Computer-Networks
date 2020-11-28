@@ -1,0 +1,1 @@
+/usr/bin/c++   -O3 -Wextra   CMakeFiles/receivercontroller.dir/receivercontroller.cpp.o  -o receivercontroller  -Wl,-rpath,/home/bisakh/Desktop/bcse/Computer-Networks/FlowControl/include ../include/library.so -lpthread -lrt 
